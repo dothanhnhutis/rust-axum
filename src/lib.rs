@@ -1,4 +1,3 @@
-use anyhow::Result;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::Duration;
 
@@ -22,8 +21,8 @@ pub struct User {
     pub password_hash: String,
 }
 
-pub async fn find_by_email(pool: &PgPool, email: &str) -> Result<Option<User>> {
-    let row = sqlx::query_as!(
+pub async fn find_by_email(pool: &PgPool, email: &str) -> Result<Option<User>, sqlx::Error> {
+    sqlx::query_as!(
         User,
         r#"
         SELECT id, email, username, password_hash
@@ -33,7 +32,21 @@ pub async fn find_by_email(pool: &PgPool, email: &str) -> Result<Option<User>> {
         email
     )
     .fetch_optional(pool)
-    .await?;
-
-    Ok(row)
+    .await
 }
+
+// pub async fn find_by_email(pool: &PgPool, email: &str) -> Result<Option<User>> {
+//     let row = sqlx::query_as!(
+//         User,
+//         r#"
+//         SELECT id, email, username, password_hash
+//         FROM users
+//         WHERE email = $1
+//         "#,
+//         email
+//     )
+//     .fetch_optional(pool)
+//     .await?;
+
+//     Ok(row)
+// }
