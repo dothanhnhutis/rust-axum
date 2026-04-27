@@ -46,6 +46,7 @@ moka = { version = "0.12", features = ["future"] }
 # 6. Security (JWT & Password Hashing)
 jsonwebtoken = "10.3.0"
 argon2 = { version = "0.5", features = ["std"] }
+thiserror = "2.0.18"
 
 [profile.release]
 # Tối ưu hóa file binary cho Production

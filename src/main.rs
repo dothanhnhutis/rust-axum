@@ -1,10 +1,7 @@
-use axum::{
-    Router,
-    routing::{get, post},
-};
+use axum::Router;
 use dotenvy::dotenv;
-use server::{find_by_email, init_db_pool, utils::password::verify_password};
-use sqlx::PgPool;
+use server::{AppState, handlers::handler_404, init_db_pool, router::create_router};
+
 use std::env;
 
 #[tokio::main]
@@ -20,14 +17,13 @@ async fn main() {
         .await
         .expect("Failed to connect to DB");
 
+    let share_state = AppState { db: pool };
+
     // 3. Build route
     let app = Router::new()
-        .route(
-            "/",
-            get(|| async { "Hệ thống quản lý kho hóa chất sẵn sàng!" }),
-        )
-        .route("/login", post(login))
-        .with_state(pool); // Chia sẻ pool cho các handler
+        .nest("/api", create_router())
+        .fallback(handler_404)
+        .with_state(share_state);
 
     // 4. Chạy server
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
@@ -35,108 +31,108 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-use serde::Deserialize;
-use validator::Validate;
+// use serde::Deserialize;
+// use validator::Validate;
 
-#[derive(Debug, Deserialize, Validate)]
-pub struct LoginRequest {
-    #[validate(email)]
-    pub email: String,
-    #[validate(length(min = 8, message = "Password phải ít nhất 6 ký tự"))]
-    pub password: String,
-}
+// #[derive(Debug, Deserialize, Validate)]
+// pub struct LoginRequest {
+//     #[validate(email)]
+//     pub email: String,
+//     #[validate(length(min = 8, message = "Password phải ít nhất 6 ký tự"))]
+//     pub password: String,
+// }
 
-use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
-use serde_json::json;
-use validator::ValidationErrors;
+// use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+// use serde_json::json;
+// use validator::ValidationErrors;
 
-#[derive(Debug)]
-pub enum AppError {
-    Validation(ValidationErrors),
-    BadRequest(String),
-    NotFound(String),
-    Unauthorized(String),
-    Internal(String),
-}
+// #[derive(Debug)]
+// pub enum AppError {
+//     Validation(ValidationErrors),
+//     BadRequest(String),
+//     NotFound(String),
+//     Unauthorized(String),
+//     Internal(String),
+// }
 
-impl IntoResponse for AppError {
-    fn into_response(self) -> axum::response::Response {
-        match self {
-            AppError::Validation(e) => (
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": e.to_string() })),
-            )
-                .into_response(),
+// impl IntoResponse for AppError {
+//     fn into_response(self) -> axum::response::Response {
+//         match self {
+//             AppError::Validation(e) => (
+//                 StatusCode::BAD_REQUEST,
+//                 Json(json!({ "error": e.to_string() })),
+//             )
+//                 .into_response(),
 
-            AppError::BadRequest(msg) => {
-                (StatusCode::BAD_REQUEST, Json(json!({ "error": msg }))).into_response()
-            }
+//             AppError::BadRequest(msg) => {
+//                 (StatusCode::BAD_REQUEST, Json(json!({ "error": msg }))).into_response()
+//             }
 
-            AppError::NotFound(msg) => {
-                (StatusCode::NOT_FOUND, Json(json!({ "error": msg }))).into_response()
-            }
+//             AppError::NotFound(msg) => {
+//                 (StatusCode::NOT_FOUND, Json(json!({ "error": msg }))).into_response()
+//             }
 
-            AppError::Unauthorized(msg) => {
-                (StatusCode::UNAUTHORIZED, Json(json!({ "error": msg }))).into_response()
-            }
+//             AppError::Unauthorized(msg) => {
+//                 (StatusCode::UNAUTHORIZED, Json(json!({ "error": msg }))).into_response()
+//             }
 
-            AppError::Internal(msg) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": msg })),
-            )
-                .into_response(),
-        }
-    }
-}
+//             AppError::Internal(msg) => (
+//                 StatusCode::INTERNAL_SERVER_ERROR,
+//                 Json(json!({ "error": msg })),
+//             )
+//                 .into_response(),
+//         }
+//     }
+// }
 
-impl From<ValidationErrors> for AppError {
-    fn from(err: ValidationErrors) -> Self {
-        AppError::Validation(err)
-    }
-}
+// impl From<ValidationErrors> for AppError {
+//     fn from(err: ValidationErrors) -> Self {
+//         AppError::Validation(err)
+//     }
+// }
 
-impl From<sqlx::Error> for AppError {
-    fn from(_: sqlx::Error) -> Self {
-        AppError::Internal("Database error".into())
-    }
-}
-use axum::extract::rejection::JsonRejection;
+// impl From<sqlx::Error> for AppError {
+//     fn from(_: sqlx::Error) -> Self {
+//         AppError::Internal("Database error".into())
+//     }
+// }
+// use axum::extract::rejection::JsonRejection;
 
-impl From<JsonRejection> for AppError {
-    fn from(err: JsonRejection) -> Self {
-        AppError::BadRequest(err.to_string())
-    }
-}
+// impl From<JsonRejection> for AppError {
+//     fn from(err: JsonRejection) -> Self {
+//         AppError::BadRequest(err.to_string())
+//     }
+// }
 
-async fn login(
-    State(pool): State<PgPool>,
-    payload: Result<Json<LoginRequest>, JsonRejection>,
-) -> Result<impl IntoResponse, AppError> {
-    let payload = match payload {
-        Ok(Json(data)) => data,
-        Err(err) => {
-            return Err(AppError::BadRequest(err.to_string()));
-        }
-    };
+// async fn login(
+//     State(pool): State<PgPool>,
+//     payload: Result<Json<LoginRequest>, JsonRejection>,
+// ) -> Result<impl IntoResponse, AppError> {
+//     let payload = match payload {
+//         Ok(Json(data)) => data,
+//         Err(err) => {
+//             return Err(AppError::BadRequest(err.to_string()));
+//         }
+//     };
 
-    // validate
-    payload?.validate()?;
+//     // validate
+//     payload.validate()?;
 
-    let user = find_by_email(&pool, &payload.email).await?;
+//     let user = find_by_email(&pool, &payload.email).await?;
 
-    let user = user.ok_or(AppError::NotFound("User không tồn tại".into()))?;
+//     let user = user.ok_or(AppError::NotFound("User không tồn tại".into()))?;
 
-    verify_password(&payload.password, &user.password_hash)
-        .map_err(|_| AppError::Unauthorized("Sai mật khẩu".into()))?;
+//     verify_password(&payload.password, &user.password_hash)
+//         .map_err(|_| AppError::Unauthorized("Sai mật khẩu".into()))?;
 
-    Ok((
-        StatusCode::OK,
-        Json(json!({
-            "message": "Đăng nhập thành công",
-            "user_id": user.id,
-        })),
-    ))
-}
+//     Ok((
+//         StatusCode::OK,
+//         Json(json!({
+//             "message": "Đăng nhập thành công",
+//             "user_id": user.id,
+//         })),
+//     ))
+// }
 
 // async fn login(
 //     State(pool): State<PgPool>,
