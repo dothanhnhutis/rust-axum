@@ -36,8 +36,14 @@ pub enum AppError {
     #[error("Unauthorized")]
     Unauthorized,
 
+    #[error("Invalid credentials")]
+    InvalidCredentials,
+
     #[error("{0}")]
     BadRequest(String),
+
+    #[error("Not found")]
+    NotFound,
 
     #[error("Internal server error")]
     Internal,
@@ -56,6 +62,13 @@ impl IntoResponse for AppError {
                 err("BAD_REQUEST", &msg, StatusCode::BAD_REQUEST).into_response()
             }
 
+            AppError::InvalidCredentials => err(
+                "INVALID_CREDENTIALS",
+                "Email hoặc mật khẩu không đúng",
+                StatusCode::UNAUTHORIZED,
+            )
+            .into_response(),
+
             AppError::Unauthorized => {
                 err("UNAUTHORIZED", "Unauthorized", StatusCode::UNAUTHORIZED).into_response()
             }
@@ -65,6 +78,9 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
             )
             .into_response(),
+            AppError::NotFound => {
+                err("NOT_FOUND", "Resource not found", StatusCode::NOT_FOUND).into_response()
+            }
 
             AppError::ValidationError(err) => {
                 let fields = format_validation_errors(err);
@@ -122,6 +138,12 @@ impl From<sqlx::Error> for AppError {
 
             _ => AppError::Internal,
         }
+    }
+}
+
+impl From<anyhow::Error> for AppError {
+    fn from(_: anyhow::Error) -> Self {
+        AppError::Internal
     }
 }
 

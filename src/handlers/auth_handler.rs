@@ -6,7 +6,7 @@ use validator::Validate;
 
 use crate::{
     error_handler::AppError,
-    utils::{err, ok},
+    utils::{blocking, err, ok, password::verify_password},
     validators::ValidatedJson,
 };
 
@@ -43,11 +43,25 @@ pub async fn login_handler(
         payload.email
     )
     .fetch_optional(&db)
-    .await?;
+    .await?
+    .ok_or(AppError::InvalidCredentials)?;
 
-    println!("{user:#?}");
+    // verify_password(&payload.password, &user.password_hash)
+    //     .map_err(|_| AppError::InvalidCredentials)?;
+
+    // let is_valid = tokio::task::spawn_blocking(move || {
+    //     verify_password(&payload.password, &user.password_hash)
+    // })
+    // .await
+    // .map_err(|_| AppError::Internal)??;
+
+    let is_valid =
+        blocking(move || verify_password(&payload.password, &user.password_hash)).await?;
+
+    println!("{is_valid:#?}");
 
     Ok(ok(json!({
-        "user_id": "123"
+        "message": "Đăng nhập thành công",
+        "user_id": user.id
     })))
 }

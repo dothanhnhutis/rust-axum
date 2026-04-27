@@ -1,7 +1,7 @@
-use axum::{http::StatusCode, response::IntoResponse};
+use crate::error_handler::AppError;
 
 pub mod auth_handler;
 
-pub async fn handler_404() -> impl IntoResponse {
-    (StatusCode::NOT_FOUND, "NOT_FOUND")
+pub async fn handler_404() -> AppError {
+    AppError::NotFound
 }
