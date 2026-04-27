@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use validator::{Validate, ValidationErrors};
 
-use crate::error_handler::ServerError;
+use crate::error_handler::AppError;
 
 pub fn format_validation_errors(err: ValidationErrors) -> Value {
     let mut field_errors = serde_json::Map::new();
@@ -24,14 +24,7 @@ pub fn format_validation_errors(err: ValidationErrors) -> Value {
 
         field_errors.insert(field.to_string(), json!(messages));
     }
-
-    json!({
-        "success": false,
-        "error": {
-            "code": "VALIDATION_ERROR",
-            "fields": field_errors
-        }
-    })
+    Value::Object(field_errors)
 }
 
 // #[derive(Debug, Clone, Copy, Default)]
@@ -61,7 +54,7 @@ where
     S: Send + Sync,
     Json<T>: FromRequest<S, Rejection = JsonRejection>,
 {
-    type Rejection = ServerError;
+    type Rejection = AppError;
 
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         let Json(value) = Json::<T>::from_request(req, state).await?;

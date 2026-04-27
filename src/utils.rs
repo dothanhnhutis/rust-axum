@@ -1,3 +1,7 @@
+use axum::{Json, http::StatusCode};
+
+use crate::error_handler::{ApiError, ApiResponse, ErrorDetail};
+
 pub mod password {
     use anyhow::Result;
 
@@ -25,4 +29,48 @@ pub mod password {
             .verify_password(password.as_bytes(), &parsed_hash)
             .is_ok())
     }
+}
+
+pub fn ok<T: serde::Serialize>(data: T) -> (StatusCode, Json<ApiResponse<T>>) {
+    (
+        StatusCode::OK,
+        Json(ApiResponse {
+            success: true,
+            data: Some(data),
+            message: None,
+        }),
+    )
+}
+
+pub fn err(code: &str, message: &str, status: StatusCode) -> (StatusCode, Json<ApiError>) {
+    (
+        status,
+        Json(ApiError {
+            success: false,
+            error: ErrorDetail {
+                code: code.to_string(),
+                message: Some(message.to_string()),
+                fields: None,
+            },
+        }),
+    )
+}
+
+pub fn err_with_fields(
+    code: &str,
+    message: &str,
+    fields: serde_json::Value,
+    status: StatusCode,
+) -> (StatusCode, Json<ApiError>) {
+    (
+        status,
+        Json(ApiError {
+            success: false,
+            error: ErrorDetail {
+                code: code.to_string(),
+                message: Some(message.to_string()),
+                fields: Some(fields),
+            },
+        }),
+    )
 }

@@ -1,14 +1,17 @@
-use axum::{Router, routing::post};
+use axum::{Router, extract::FromRef, routing::post};
+use sqlx::PgPool;
 
-use crate::{AppState, handlers::auth_handler::login_handler};
+use crate::handlers::auth_handler::login_handler;
 
-pub fn create_routes() -> Router<AppState> {
-    Router::new().route("/login", post(login_handler))
-}
-
-// pub fn create_router<S>() -> Router<S>
-// where
-//     S: Clone + Send + Sync + 'static,
-// {
+// pub fn create_routes() -> Router<AppState> {
 //     Router::new().route("/login", post(login_handler))
 // }
+
+// case 2 advance
+pub fn create_router<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    PgPool: FromRef<S>,
+{
+    Router::new().route("/login", post(login_handler))
+}
