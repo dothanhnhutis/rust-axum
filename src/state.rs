@@ -4,4 +4,5 @@ use sqlx::PgPool;
 #[derive(Clone, FromRef)]
 pub struct AppState {
     pub db: PgPool,
+    pub jwt_secret: String,
 }

@@ -20,14 +20,17 @@ async fn main() {
         .await
         .expect("Failed to connect to DB");
 
-    let share_state = AppState { db: pool };
+    let share_state = AppState {
+        db: pool,
+        jwt_secret: "secret".to_string(),
+    };
 
     // 3. Build route
     let app = Router::new()
         .nest("/api", create_router())
         .fallback(handler_404)
         .layer(middleware::from_fn_with_state(
-            secret.clone(),
+            share_state.clone(),
             auth_middleware,
         ))
         .with_state(share_state);

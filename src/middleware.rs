@@ -1,11 +1,11 @@
-use axum::{extract::State, http::Request, middleware::Next, response::Response};
+use axum::{body::Body, extract::State, http::Request, middleware::Next, response::Response};
 
 use crate::{error_handler::AppError, utils::jwt::verify_token};
 
-pub async fn auth_middleware<B>(
+pub async fn auth_middleware(
     State(secret): State<String>,
-    mut req: Request<B>,
-    next: Next<B>,
+    mut req: Request<Body>,
+    next: Next,
 ) -> Result<Response, AppError> {
     let auth_header = req
         .headers()
@@ -23,4 +23,29 @@ pub async fn auth_middleware<B>(
     req.extensions_mut().insert(claims.sub);
 
     Ok(next.run(req).await)
+}
+
+use axum::{extract::FromRequestParts, http::request::Parts};
+
+#[derive(Clone)]
+pub struct CurrentUser {
+    pub user_id: String,
+}
+
+impl<S> FromRequestParts<S> for CurrentUser
+where
+    S: Send + Sync,
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+        let user = parts
+            .extensions
+            .get::<CurrentUser>()
+            .ok_or(AppError::Unauthorized)?;
+
+        Ok(CurrentUser {
+            user_id: user.user_id.clone(),
+        })
+    }
 }
