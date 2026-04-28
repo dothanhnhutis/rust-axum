@@ -8,6 +8,8 @@ pub mod utils;
 pub mod error_handler;
 pub mod validators;
 
+pub mod middleware;
+
 mod state;
 pub use state::AppState;
 

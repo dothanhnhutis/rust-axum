@@ -1,6 +1,9 @@
-use axum::Router;
+use axum::{Router, middleware};
 use dotenvy::dotenv;
-use server::{AppState, handlers::handler_404, init_db_pool, router::create_router};
+use server::{
+    AppState, handlers::handler_404, init_db_pool, middleware::auth_middleware,
+    router::create_router,
+};
 
 use std::env;
 
@@ -23,6 +26,10 @@ async fn main() {
     let app = Router::new()
         .nest("/api", create_router())
         .fallback(handler_404)
+        .layer(middleware::from_fn_with_state(
+            secret.clone(),
+            auth_middleware,
+        ))
         .with_state(share_state);
 
     // 4. Chạy server
