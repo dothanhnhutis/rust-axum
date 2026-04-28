@@ -7,6 +7,7 @@ pub async fn auth_middleware(
     mut req: Request<Body>,
     next: Next,
 ) -> Result<Response, AppError> {
+    println!("{req:#?}");
     let auth_header = req
         .headers()
         .get("Authorization")

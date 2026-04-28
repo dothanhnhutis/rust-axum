@@ -27,12 +27,8 @@ async fn main() {
 
     // 3. Build route
     let app = Router::new()
-        .nest("/api", create_router())
+        .nest("/api", create_router("secret".to_string()))
         .fallback(handler_404)
-        .layer(middleware::from_fn_with_state(
-            share_state.clone(),
-            auth_middleware,
-        ))
         .with_state(share_state);
 
     // 4. Chạy server
