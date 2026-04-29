@@ -12,6 +12,7 @@ pub fn create_router<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
     PgPool: FromRef<S>,
+    String: FromRef<S>,
 {
     Router::new()
         .route("/login", post(login_handler))

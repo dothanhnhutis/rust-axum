@@ -1,9 +1,10 @@
 use axum::{body::Body, extract::State, http::Request, middleware::Next, response::Response};
+use serde::{Deserialize, Serialize};
 
-use crate::{AppState, error_handler::AppError, utils::jwt::verify_token};
+use crate::{error_handler::AppError, state::AppState, utils::jwt::verify_token};
 
 pub async fn auth_middleware(
-    // State(state): State<AppState>,
+    State(state): State<AppState>,
     mut req: Request<Body>,
     next: Next,
 ) -> Result<Response, AppError> {
@@ -17,8 +18,7 @@ pub async fn auth_middleware(
         .strip_prefix("Bearer ")
         .ok_or(AppError::Unauthorized)?;
 
-    let claims = verify_token(token, "secret").map_err(|_| AppError::Unauthorized)?;
-    println!("{claims:#?}");
+    let claims = verify_token(token, &state.jwt_secret).map_err(|_| AppError::Unauthorized)?;
 
     req.extensions_mut().insert(claims.sub);
 
@@ -27,7 +27,7 @@ pub async fn auth_middleware(
 
 use axum::{extract::FromRequestParts, http::request::Parts};
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct CurrentUser {
     pub user_id: String,
 }
@@ -39,14 +39,13 @@ where
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
-        println!("2");
-        let user = parts
+        let user_id = parts
             .extensions
             .get::<String>()
             .ok_or(AppError::Unauthorized)?;
-        println!("user: {user:?}");
+
         Ok(CurrentUser {
-            user_id: "123".to_string(),
+            user_id: user_id.clone(),
         })
     }
 }
