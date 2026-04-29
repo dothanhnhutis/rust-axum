@@ -1,15 +1,12 @@
-use axum::{Router, extract::FromRef, routing::post};
+use axum::{Router, extract::FromRef, routing::get};
 use sqlx::PgPool;
 
-use crate::handlers::auth_handler::{login_handler, logout, refresh};
+use crate::handlers::user_handler::current_user;
 
 pub fn create_router<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
     PgPool: FromRef<S>,
 {
-    Router::new()
-        .route("/login", post(login_handler))
-        .route("/refresh", post(refresh))
-        .route("/logout", post(logout))
+    Router::new().route("/me", get(current_user))
 }

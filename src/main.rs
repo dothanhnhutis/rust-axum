@@ -4,6 +4,8 @@ use server::{
     AppState, handlers::handler_404, init_db_pool, middleware::auth_middleware,
     router::create_router,
 };
+use tower::ServiceBuilder;
+use tower_http::trace::TraceLayer;
 
 use std::env;
 
@@ -27,9 +29,10 @@ async fn main() {
 
     // 3. Build route
     let app = Router::new()
-        .nest("/api", create_router("secret".to_string()))
+        .nest("/api", create_router())
         .fallback(handler_404)
-        .with_state(share_state);
+        .with_state(share_state)
+        .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http()));
 
     // 4. Chạy server
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
