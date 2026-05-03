@@ -1,6 +1,5 @@
-use axum::{Json, http::StatusCode};
-
 use crate::error_handler::{ApiError, ApiResponse, AppError, ErrorDetail};
+use axum::{Json, http::StatusCode};
 
 pub mod password {
     use anyhow::Result;
@@ -41,21 +40,16 @@ pub fn ok<T: serde::Serialize>(data: T) -> (StatusCode, Json<ApiResponse<T>>) {
         Json(ApiResponse {
             success: true,
             data: Some(data),
-            message: None,
         }),
     )
 }
 
-pub fn err(code: &str, message: &str, status: StatusCode) -> (StatusCode, Json<ApiError>) {
+pub fn err(status: StatusCode, error: ErrorDetail) -> (StatusCode, Json<ApiError>) {
     (
         status,
         Json(ApiError {
             success: false,
-            error: ErrorDetail {
-                code: code.to_string(),
-                message: Some(message.to_string()),
-                fields: None,
-            },
+            error,
         }),
     )
 }
@@ -134,4 +128,44 @@ pub fn hash_token(token: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(token);
     hex::encode(hasher.finalize())
+}
+
+use std::collections::HashMap;
+#[derive(Debug)]
+pub enum UuidError {
+    InvalidFormat,  // không phải UUID
+    InvalidVersion, // không phải v7
+}
+pub fn validate_uuid_v7_string(id: &str) -> Result<(), UuidError> {
+    let uuid = uuid::Uuid::parse_str(id).map_err(|_| UuidError::InvalidFormat)?;
+
+    if uuid.get_version_num() != 7 {
+        return Err(UuidError::InvalidVersion);
+    }
+
+    Ok(())
+}
+
+pub fn validate_uuid_v7_list(ids: &[String]) -> HashMap<String, String> {
+    let mut errors = HashMap::new();
+
+    for (i, id) in ids.iter().enumerate() {
+        match validate_uuid_v7_string(id) {
+            Ok(_) => {}
+            Err(UuidError::InvalidFormat) => {
+                errors.insert(
+                    format!("permission_ids[{}]", i),
+                    "UUID không hợp lệ".to_string(),
+                );
+            }
+            Err(UuidError::InvalidVersion) => {
+                errors.insert(
+                    format!("permission_ids[{}]", i),
+                    "UUID phải là version 7".to_string(),
+                );
+            }
+        }
+    }
+
+    errors
 }

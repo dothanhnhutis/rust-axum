@@ -15,7 +15,6 @@ use serde::Serialize;
 pub struct ApiResponse<T> {
     pub success: bool,
     pub data: Option<T>,
-    pub message: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -39,6 +38,9 @@ pub enum AppError {
     #[error("Invalid credentials")]
     InvalidCredentials,
 
+    #[error("Deactivated account")]
+    DeactivatedAccount,
+
     #[error("{0}")]
     BadRequest(String),
 
@@ -58,31 +60,66 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         match self {
-            AppError::BadRequest(msg) => {
-                err("BAD_REQUEST", &msg, StatusCode::BAD_REQUEST).into_response()
-            }
+            AppError::BadRequest(msg) => err(
+                StatusCode::BAD_REQUEST,
+                ErrorDetail {
+                    code: "BAD_REQUEST".to_string(),
+                    message: Some(msg),
+                    fields: None,
+                },
+            )
+            .into_response(),
 
             AppError::InvalidCredentials => err(
-                "INVALID_CREDENTIALS",
-                "Email hoặc mật khẩu không đúng",
                 StatusCode::UNAUTHORIZED,
+                ErrorDetail {
+                    code: "INVALID_CREDENTIALS".to_string(),
+                    message: Some("Email hoặc mật khẩu không đúng".to_string()),
+                    fields: None,
+                },
+            )
+            .into_response(),
+            AppError::Unauthorized => err(
+                StatusCode::UNAUTHORIZED,
+                ErrorDetail {
+                    code: "UNAUTHORIZED".to_string(),
+                    message: Some("Unauthorized".to_string()),
+                    fields: None,
+                },
             )
             .into_response(),
 
-            AppError::Unauthorized => {
-                err("UNAUTHORIZED", "Unauthorized", StatusCode::UNAUTHORIZED).into_response()
-            }
             AppError::Internal => err(
-                "INTERNAL_ERROR",
-                "Something went wrong",
                 StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorDetail {
+                    code: "INTERNAL_ERROR".to_string(),
+                    message: Some("Something went wrong".to_string()),
+                    fields: None,
+                },
             )
             .into_response(),
-            AppError::NotFound => {
-                err("NOT_FOUND", "Resource not found", StatusCode::NOT_FOUND).into_response()
-            }
+            AppError::NotFound => err(
+                StatusCode::NOT_FOUND,
+                ErrorDetail {
+                    code: "NOT_FOUND".to_string(),
+                    message: Some("Resource not found".to_string()),
+                    fields: None,
+                },
+            )
+            .into_response(),
+            AppError::DeactivatedAccount => err(
+                StatusCode::UNAUTHORIZED,
+                ErrorDetail {
+                    code: "DEACTIVATED_ACCOUNT".to_string(),
+                    message: Some("Deactivated account".to_string()),
+                    fields: None,
+                },
+            )
+            .into_response(),
 
             AppError::ValidationError(err) => {
+                println!("{err:#?}");
+
                 let fields = format_validation_errors(err);
 
                 err_with_fields(
@@ -93,30 +130,30 @@ impl IntoResponse for AppError {
                 )
                 .into_response()
             }
-            AppError::AxumJsonRejection(err) => {
-                let message = err.to_string();
-                // detect unknown field
-                if message.contains("unknown field") {
-                    let body = serde_json::json!({
-                        "success": false,
-                        "error": {
-                            "code": "INVALID_REQUEST",
-                            "message": "Request body không hợp lệ"
+            AppError::AxumJsonRejection(error) => {
+                let (code, message) = match error {
+                    JsonRejection::JsonSyntaxError(_) => ("BAD_JSON", "JSON không hợp lệ"),
+                    JsonRejection::JsonDataError(e) => {
+                        if e.to_string().contains("unknown field") {
+                            ("INVALID_REQUEST", "Request chứa field không hợp lệ")
+                        } else {
+                            ("INVALID_REQUEST", "Dữ liệu không hợp lệ")
                         }
-                    });
-
-                    return (StatusCode::BAD_REQUEST, axum::Json(body)).into_response();
-                }
-
-                let body = serde_json::json!({
-                    "success": false,
-                    "error": {
-                        "code": "BAD_JSON",
-                        "message": message
                     }
-                });
-
-                (StatusCode::BAD_REQUEST, axum::Json(body)).into_response()
+                    JsonRejection::MissingJsonContentType(_) => {
+                        ("BAD_REQUEST", "Content-Type phải là application/json")
+                    }
+                    _ => ("BAD_REQUEST", "Request không hợp lệ"),
+                };
+                err(
+                    StatusCode::BAD_REQUEST,
+                    ErrorDetail {
+                        code: code.to_string(),
+                        message: Some(message.to_string()),
+                        fields: None,
+                    },
+                )
+                .into_response()
             }
         }
     }

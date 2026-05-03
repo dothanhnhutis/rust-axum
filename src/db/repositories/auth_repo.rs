@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 
 use crate::{
-    db::models::refresh_token_row::RefreshTokenRow, error_handler::AppError, utils::hash_token,
+    db::models::refresh_token_model::RefreshTokenRow, error_handler::AppError, utils::hash_token,
 };
 
 pub async fn create_token(pool: &PgPool, user_id: &str) -> Result<String, AppError> {
@@ -22,7 +22,7 @@ pub async fn create_token(pool: &PgPool, user_id: &str) -> Result<String, AppErr
 pub async fn get_token(pool: &PgPool, token_hash: &str) -> Result<RefreshTokenRow, AppError> {
     let record = sqlx::query_as!(
         RefreshTokenRow,
-        "SELECT id, user_id, revoked, expires_at
+        "SELECT *
          FROM refresh_tokens
          WHERE token_hash = $1",
         token_hash

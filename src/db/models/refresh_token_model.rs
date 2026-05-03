@@ -7,4 +7,8 @@ pub struct RefreshTokenRow {
     pub user_id: String,
     pub revoked: bool,
     pub expires_at: DateTime<Utc>,
+    pub user_agent: Option<String>,
+    pub ip_address: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub token_hash: String,
 }

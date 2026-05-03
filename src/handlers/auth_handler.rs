@@ -17,7 +17,7 @@ use crate::{
 #[derive(Deserialize, Debug, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct LoginRequest {
-    #[validate(email(message = "Email không hợp lệ."))]
+    #[validate(email(message = "Email và mật khẩu không hợp lệ."))]
     email: String,
     #[validate(length(min = 8, message = "Email và mật khẩu không hợp lệ."))]
     password: String,

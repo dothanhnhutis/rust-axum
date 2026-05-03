@@ -1,2 +1,3 @@
-pub mod refresh_token_row;
-pub mod user_row;
+pub mod refresh_token_model;
+pub mod role_model;
+pub mod user_model;

@@ -1,28 +1,33 @@
+use std::collections::HashMap;
+
 use axum::{
     Json,
     extract::{FromRequest, Request, rejection::JsonRejection},
 };
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use validator::{Validate, ValidationErrors};
+use validator::{Validate, ValidationErrors, ValidationErrorsKind};
 
 use crate::error_handler::AppError;
 
 pub fn format_validation_errors(err: ValidationErrors) -> Value {
     let mut field_errors = serde_json::Map::new();
 
-    for (field, errors) in err.field_errors() {
-        let messages: Vec<String> = errors
-            .iter()
-            .map(|e| {
-                e.message
-                    .as_ref()
-                    .map(|m| m.to_string())
-                    .unwrap_or_else(|| "invalid value".to_string())
-            })
-            .collect();
-
-        field_errors.insert(field.to_string(), json!(messages));
+    for (field, kind) in err.errors() {
+        match kind {
+            ValidationErrorsKind::Field(errors) => {
+                if let Some(error) = errors.first() {
+                    let message = error
+                        .message
+                        .clone()
+                        .unwrap_or_else(|| "invalid value".into())
+                        .to_string();
+                    field_errors.insert(field.to_string(), json!(message));
+                }
+            }
+            ValidationErrorsKind::List(list) => {}
+            ValidationErrorsKind::Struct(s) => {}
+        }
     }
     Value::Object(field_errors)
 }

@@ -1,4 +1,4 @@
-use axum::{Router, middleware};
+use axum::Router;
 use dotenvy::dotenv;
 use server::{handlers::handler_404, init_db_pool, router::create_router, state::AppState};
 use std::env;
@@ -26,7 +26,7 @@ async fn main() {
 
     // 3. Build route
     let app = Router::new()
-        .nest("/api", create_router(share_state.clone()))
+        .nest("/api", create_router())
         .fallback(handler_404)
         .with_state(share_state)
         .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http()));
