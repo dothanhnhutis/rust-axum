@@ -7,9 +7,10 @@ use crate::{
 pub async fn create_token(pool: &PgPool, user_id: &str) -> Result<String, AppError> {
     let refresh = uuid::Uuid::new_v4().to_string();
     let refresh_hash = hash_token(&refresh);
+    println!("{refresh_hash:#?}");
+    println!("{user_id:#?}");
     sqlx::query!(
-        "INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-         VALUES ($1, $2, now() + interval '7 days')",
+        "INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, now() + interval '7 days')",
         user_id,
         refresh_hash
     )

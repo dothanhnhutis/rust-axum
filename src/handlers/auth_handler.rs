@@ -1,3 +1,5 @@
+use std::ffi::c_long;
+
 use axum::{Json, extract::State, response::IntoResponse};
 use serde::Deserialize;
 use serde_json::json;
@@ -10,6 +12,7 @@ use crate::{
         user_repo::find_user_by_email,
     },
     error_handler::AppError,
+    state::Config,
     utils::{blocking, hash_token, jwt::create_access_token, ok, password::verify_password},
     validators::ValidatedJson,
 };
@@ -25,22 +28,18 @@ pub struct LoginRequest {
 
 pub async fn login_handler(
     State(db): State<PgPool>,
-    State(jwt_secret): State<String>,
+    State(config): State<Config>,
     ValidatedJson(payload): ValidatedJson<LoginRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     let user = find_user_by_email(&db, &payload.email).await?;
 
     let is_valid =
         blocking(move || verify_password(&payload.password, &user.password_hash)).await?;
-
     if !is_valid {
         return Err(AppError::InvalidCredentials);
     }
-
-    let access = create_access_token(&user.id.to_string(), &jwt_secret)?;
-
+    let access = create_access_token(&user.id.to_string(), &config.jwt_secret)?;
     let refresh = create_token(&db, &user.id).await?;
-
     Ok(ok(json!({
         "message": "Đăng nhập thành công",
         "access_token": access,

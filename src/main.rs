@@ -1,6 +1,11 @@
 use axum::Router;
 use dotenvy::dotenv;
-use server::{handlers::handler_404, init_db_pool, router::create_router, state::AppState};
+use server::{
+    handlers::handler_404,
+    init_db_pool,
+    router::create_router,
+    state::{AppState, Config},
+};
 use std::env;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
@@ -21,15 +26,15 @@ async fn main() {
 
     let share_state = AppState {
         db: pool,
-        jwt_secret,
+        config: Config { jwt_secret },
     };
 
     // 3. Build route
     let app = Router::new()
-        .nest("/api", create_router())
+        .nest("/api/v1", create_router())
         .fallback(handler_404)
-        .with_state(share_state)
-        .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http()));
+        .with_state(share_state);
+    // .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http()));
 
     // 4. Chạy server
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();

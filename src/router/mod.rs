@@ -1,7 +1,7 @@
 use axum::{Router, extract::FromRef, middleware};
 use sqlx::PgPool;
 
-use crate::{middleware::auth_middleware, state::AppState};
+use crate::{middleware::auth_middleware, state::Config};
 mod auth_routes;
 mod role_routes;
 mod user_routes;
@@ -14,7 +14,7 @@ pub fn create_router<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
     PgPool: FromRef<S>,
-    String: FromRef<S>,
+    Config: FromRef<S>,
 {
     let protected = Router::new()
         .nest("/users", user_routes::create_router())
